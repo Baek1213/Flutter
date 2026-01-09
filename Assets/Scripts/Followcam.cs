@@ -4,7 +4,7 @@ public class Followcam : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public Transform target; // 캐릭터
-    public Vector3 offset = new Vector3(0, 0, -10); // 카메라 거리
+    public Vector3 offset = new Vector3(-0.5f, 0, -10); // 카메라 거리
     void Start()
     {
         
