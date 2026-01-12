@@ -24,11 +24,16 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        Movement();
+        //Movement();
+        Go();
         Fly();
         Dive();
     }
-    private void Movement()
+    private void Go() 
+    {
+        rb.linearVelocity = new Vector2(Speed, rb.linearVelocity.y);
+    }
+    /*private void Movement()
     {
         float moveInput = 0f;
 
@@ -45,7 +50,7 @@ public class PlayerController : MonoBehaviour
             LR = true;        }
 
         rb.linearVelocity = new Vector2(moveInput * Speed, rb.linearVelocity.y);
-    }
+    }*/
 
     private void Fly()
     {
