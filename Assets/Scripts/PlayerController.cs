@@ -6,9 +6,9 @@ public class PlayerController : MonoBehaviour
 {
     private Rigidbody2D rb;
     private Collider2D coll;
-    private bool LR=false;
+    public Transform target;
     [SerializeField] private Animator anim;
-    [SerializeField] private float Speed = 5f;
+    [SerializeField] private float Speed = 1f;
     [SerializeField] private float FlyPow = 8f;
     [SerializeField] private float DivePow = -15f;     // 다이브 힘(아래로면 -값)
     [SerializeField] private float diveSeconds = 0.5f;
@@ -31,7 +31,10 @@ public class PlayerController : MonoBehaviour
     }
     private void Go() 
     {
-        rb.linearVelocity = new Vector2(Speed, rb.linearVelocity.y);
+        if(target.position.x <= -8)
+            rb.linearVelocity = new Vector2(Speed, rb.linearVelocity.y);
+        else
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
     }
     /*private void Movement()
     {

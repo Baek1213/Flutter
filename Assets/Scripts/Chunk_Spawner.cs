@@ -4,70 +4,150 @@ using UnityEngine.Tilemaps;
 
 public class ChunkSpawner : MonoBehaviour
 {
-    public Transform player;
-    public Tilemap chunkPrefab;     // ★ ChunkPrefab(=Tilemap 프리팹) 넣기
-    public int chunkWidth = 32;
-    public int chunkHeight = 18;
+   
+    public Grid grid;
+    [Header("Chunk Prefab")]
+    public Tilemap chunkPrefab;
 
-    public int keepAhead = 3;
-    public int keepBehind = 2;
+    [Header("Chunk Size (cells)")]
+    public int chunkWidth = 27;
+    public int chunkHeight = 10;
 
+    [Header("Scroll")]
+    public float scrollSpeed = 5f;      // 청크가 왼쪽으로 흐르는 속도(월드 유닛/초)
+    public float chunkYOffset = -5f;    // 너가 쓰던 y 오프셋 유지
+
+    [Header("Camera")]
+    public Camera cam;
+    public float spawnBufferWorld = 2f; // 화면 오른쪽 여유분
+
+    [Header("Tiles")]
     public TileBase wallTile;
 
-    // 아이템(스프라이트 프리팹들)
+    [Header("Items (sprite prefabs)")]
     public GameObject cherryPrefab;
     public GameObject gemPrefab;
     public float itemChance = 0.15f;
 
-    readonly Dictionary<int, Tilemap> chunks = new();
+    // 살아있는 청크들(왼->오 순서로 관리)
+    readonly List<Tilemap> alive = new();
 
-    void Update()
+    float ChunkWorldWidth => chunkWidth * (grid ? grid.cellSize.x : 1f);
+
+    void Awake()
     {
-        if (!player || !chunkPrefab) return;
+        if (!cam) cam = Camera.main;
+        if (!grid) grid = GetComponent<Grid>();
+    }
 
-        int playerChunk = Mathf.FloorToInt(player.position.x / chunkWidth);
+    void Start()
+    {
+        if (!chunkPrefab) return;
 
-        // 생성
-        for (int i = playerChunk - keepBehind; i <= playerChunk + keepAhead; i++)
-        {
-            if (!chunks.ContainsKey(i))
-                chunks[i] = CreateChunk(i);
-        }
+        // 시작 시 화면을 청크로 채워놓기
+        float left = CamLeftX() - spawnBufferWorld;
+        float x = left;
 
-        // 삭제
-        var remove = new List<int>();
-        foreach (var kv in chunks)
+        // 최소 3~6개 정도는 깔려 있어야 안정적
+        while (x < CamRightX() + spawnBufferWorld)
         {
-            if (kv.Key < playerChunk - keepBehind - 1)
-                remove.Add(kv.Key);
-        }
-        foreach (int idx in remove)
-        {
-            Destroy(chunks[idx].gameObject);
-            chunks.Remove(idx);
+            alive.Add(CreateChunkAt(x));
+            x += ChunkWorldWidth;
         }
     }
 
-    Tilemap CreateChunk(int idx)
+    void FixedUpdate()
     {
-        // Grid(=이 스크립트 붙은 오브젝트) 밑에 생성
+        if (!chunkPrefab) return;
+
+        // (선택) 플레이어 X 고정
+        
+
+        float dx = scrollSpeed * Time.fixedDeltaTime;
+
+        // 1) 모든 청크를 왼쪽으로 이동
+        for (int i = 0; i < alive.Count; i++)
+        {
+            var tm = alive[i];
+            if (!tm) continue;
+
+            // Rigidbody2D(Kinematic) 쓰면 여기 rb.MovePosition으로 바꾸는 게 더 안전함
+            tm.transform.position += Vector3.left * dx;
+        }
+
+        // 2) 왼쪽 밖으로 나간 청크 삭제
+        float leftBound = CamLeftX() - spawnBufferWorld;
+
+        for (int i = alive.Count - 1; i >= 0; i--)
+        {
+            var tm = alive[i];
+            if (!tm) { alive.RemoveAt(i); continue; }
+
+            float rightEdge = tm.transform.position.x + ChunkWorldWidth;
+            if (rightEdge < leftBound)
+            {
+                Destroy(tm.gameObject);
+                alive.RemoveAt(i);
+            }
+        }
+
+        // 3) 오른쪽 끝이 비면 새 청크 생성
+        float needRight = CamRightX() + spawnBufferWorld;
+        while (RightmostEdgeX() < needRight)
+        {
+            float spawnX = (alive.Count == 0) ? (CamLeftX() - spawnBufferWorld) : RightmostEdgeX();
+            alive.Add(CreateChunkAt(spawnX));
+        }
+    }
+
+    Tilemap CreateChunkAt(float worldX)
+    {
         var tm = Instantiate(chunkPrefab, transform);
-        tm.name = $"Chunk_{idx:D3}";
-        tm.transform.localPosition = new Vector3(idx * chunkWidth, -5, 0);
-        tm.transform.localRotation = Quaternion.identity;
+        tm.name = $"Chunk_{Time.frameCount}";
+        tm.transform.position = new Vector3(worldX, chunkYOffset, 0f);
+        tm.transform.rotation = Quaternion.identity;
         tm.transform.localScale = Vector3.one;
 
         PaintObstacles(tm);
-        SpawnItems(tm, tm.transform); // 청크의 자식으로 아이템 스폰
+        SpawnItems(tm, tm.transform);
 
         return tm;
     }
+
+    float RightmostEdgeX()
+    {
+        float max = float.NegativeInfinity;
+        for (int i = 0; i < alive.Count; i++)
+        {
+            var tm = alive[i];
+            if (!tm) continue;
+
+            float edge = tm.transform.position.x + ChunkWorldWidth;
+            if (edge > max) max = edge;
+        }
+        return (max == float.NegativeInfinity) ? (CamLeftX() - spawnBufferWorld) : max;
+    }
+
+    float CamLeftX()
+    {
+        float halfW = cam.orthographicSize * cam.aspect;
+        return cam.transform.position.x - halfW;
+    }
+
+    float CamRightX()
+    {
+        float halfW = cam.orthographicSize * cam.aspect;
+        return cam.transform.position.x + halfW;
+    }
+
+    // ----------------------
+    // 기존 로직(장애물/아이템)
+    // ----------------------
 
     void PaintObstacles(Tilemap tm)
     {
         tm.ClearAllTiles();
 
-        // 테스트용: 플래피 기둥 2개
         for (int p = 0; p < 2; p++)
         {
             int x = 8 + p * 16;
@@ -93,7 +173,6 @@ public class ChunkSpawner : MonoBehaviour
             int y = Random.Range(2, chunkHeight - 2);
             Vector3 world = tm.CellToWorld(new Vector3Int(x, y, 0)) + tm.cellSize * 0.5f;
 
-            // 체리/젬 랜덤
             GameObject prefab = (Random.value < 0.5f) ? cherryPrefab : gemPrefab;
             if (!prefab) continue;
 
