@@ -6,6 +6,7 @@ public class ChunkSpawner : MonoBehaviour
 {
    
     public Grid grid;
+
     [Header("Chunk Prefab")]
     public Tilemap chunkPrefab;
 

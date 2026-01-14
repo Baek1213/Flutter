@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 3650431146652220918}
   - component: {fileID: 6969343648652991218}
   - component: {fileID: 8842108059880533315}
+  - component: {fileID: 6725779675963946302}
   m_Layer: 0
   m_Name: player
   m_TagString: Player
@@ -180,14 +181,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 826aa0d053ec6494a91038e6c188ed66, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
+  target: {fileID: 8871848160308517854}
   anim: {fileID: 8842108059880533315}
   Speed: 6
   FlyPow: 8
   DivePow: -10
   diveSeconds: 0.3
-  ground:
-    serializedVersion: 2
-    m_Bits: 8
 --- !u!95 &8842108059880533315
 Animator:
   serializedVersion: 7
@@ -210,3 +209,16 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &6725779675963946302
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2486791559275828922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ceac8f82dc64d64d8c7a06c7a15d61f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Gameover
+  target: {fileID: 8871848160308517854}

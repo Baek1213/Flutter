@@ -2,21 +2,25 @@ using UnityEngine;
 
 public class ScoreItem : MonoBehaviour
 {
-    public int score = 1;
-    public string playerTag = "Player";
+    public static int score = 0;
+    public static int BestScore = 0;
 
-    bool used;
+    private string playerTag = "Player";
+    private string itemTag1 = "heal_item";
+    private string itemTag2 = "score_item";
 
-    private void OnTriggerEnter2D(Collider2D other)
+    void Update()
     {
-        if (used) return;
-        if (!other.CompareTag(playerTag)) return;
-
-        used = true;
-
-        // 점수 올리기 (너 프로젝트 방식에 맞게 바꿔)
+        if (BestScore <= ScoreItem.score)
+            BestScore = ScoreItem.score;
+    }
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
         
-
+        if (!collision.CompareTag(playerTag)) return;
+        
+        if (CompareTag(itemTag1)) score += 300;
+        if (CompareTag(itemTag2)) score += 500;
         // 먹는 연출: 애니 트리거 or 파티클
         var anim = GetComponent<Animator>();
         if (anim) anim.SetTrigger("Collect");
@@ -26,5 +30,6 @@ public class ScoreItem : MonoBehaviour
         if (col) col.enabled = false;
 
         Destroy(gameObject, 0.5f); // 애니 길이에 맞게
+
     }
 }

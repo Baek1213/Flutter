@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // 추가!
+using UnityEngine.InputSystem; 
 using System.Collections;
 
 public class PlayerController : MonoBehaviour
@@ -7,12 +7,13 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     private Collider2D coll;
     public Transform target;
+    private bool isCollision;
     [SerializeField] private Animator anim;
-    [SerializeField] private float Speed = 1f;
+    [SerializeField] private float Speed = 0.1f;
     [SerializeField] private float FlyPow = 8f;
-    [SerializeField] private float DivePow = -15f;     // 다이브 힘(아래로면 -값)
+    [SerializeField] private float DivePow = -15f;     
     [SerializeField] private float diveSeconds = 0.5f;
-    [SerializeField] private LayerMask ground;
+    
 
     private Coroutine diveCo;
 
@@ -29,8 +30,22 @@ public class PlayerController : MonoBehaviour
         Fly();
         Dive();
     }
+    
+
+    private void OnCollisionEnter2D(Collision2D col)
+    {
+        isCollision = true;
+    }
+
+    private void OnCollisionExit2D(Collision2D col)
+    {
+        isCollision = false;
+    }
     private void Go() 
     {
+        if (isCollision) Speed = 0f;
+        else Speed = 1f;
+
         if(target.position.x <= -8)
             rb.linearVelocity = new Vector2(Speed, rb.linearVelocity.y);
         else

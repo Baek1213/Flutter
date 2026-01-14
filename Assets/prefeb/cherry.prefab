@@ -174,5 +174,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83a67be0195f09c40a60bc55a2cf19ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScoreItem
-  score: 1
-  playerTag: Player
+  MyText: {fileID: 2405380656328902963, guid: 1bfc33866074fb348b933b99b3289af0, type: 3}
