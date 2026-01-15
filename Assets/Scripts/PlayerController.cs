@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        
         rb = GetComponent<Rigidbody2D>();
         coll = GetComponent<Collider2D>();
     }
@@ -46,7 +47,7 @@ public class PlayerController : MonoBehaviour
         if (isCollision) Speed = 0f;
         else Speed = 1f;
 
-        if(target.position.x <= -8)
+        if(target.position.x <= -6)
             rb.linearVelocity = new Vector2(Speed, rb.linearVelocity.y);
         else
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);

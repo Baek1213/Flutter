@@ -13,10 +13,11 @@ public class ColorFilter : MonoBehaviour
     private Color[] originalSpriteColors;
     private Color[] originalTilemapColors;
 
-    private enum FilterMode { Normal, Red, Blue, Green }
-    private FilterMode currentMode = FilterMode.Normal;
 
-    void Start()
+    [SerializeField] private FilterMode currentMode = FilterMode.White;
+    public FilterMode CurrentMode => currentMode;
+
+    private void Awake()
     {
         spriteRenderers = new SpriteRenderer[targetObjects.Length];
         tilemaps = new Tilemap[targetObjects.Length];
@@ -39,6 +40,10 @@ public class ColorFilter : MonoBehaviour
                 originalTilemapColors[i] = tilemaps[i].color;
         }
     }
+    void Start()
+    {
+        
+    }
 
     void Update()
     {
@@ -50,6 +55,7 @@ public class ColorFilter : MonoBehaviour
     {
         currentMode = (FilterMode)(((int)currentMode + 1) % 4);
         ApplyCurrentFilter();
+        RefreshColorWalls();
     }
 
     private void ApplyCurrentFilter()
@@ -71,12 +77,17 @@ public class ColorFilter : MonoBehaviour
             }
         }
     }
-
+    private void RefreshColorWalls()
+    {
+        var walls = FindObjectsOfType<ColorWallState>();
+        for (int i = 0; i < walls.Length; i++)
+            walls[i].Refresh(currentMode);
+    }
     private Color Filtered(Color original)
     {
         switch (currentMode)
         {
-            case FilterMode.Normal: return original;
+            case FilterMode.White: return original;
             case FilterMode.Red: return new Color(original.r, 0f, 0f, original.a);
             case FilterMode.Blue: return new Color(0f, 0f, original.b, original.a);
             case FilterMode.Green: return new Color(0f, original.g, 0f, original.a);
