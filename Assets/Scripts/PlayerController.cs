@@ -26,7 +26,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        //Movement();
+        if (!UI_Fixer.isGameStarted) return;
         Go();
         Fly();
         Dive();
@@ -42,6 +42,10 @@ public class PlayerController : MonoBehaviour
     {
         isCollision = false;
     }
+    private void OnTriggerExit2D(Collider2D col)//색깔벽에 딱붙어있다가 트리거 발생으로 색깔벽을 넘어갈시
+    {
+        isCollision = false;
+    }
     private void Go() 
     {
         if (isCollision) Speed = 0f;
@@ -52,24 +56,7 @@ public class PlayerController : MonoBehaviour
         else
             rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
     }
-    /*private void Movement()
-    {
-        float moveInput = 0f;
-
-        if (Keyboard.current.leftArrowKey.isPressed)
-        {
-            moveInput = -1f;
-            if(LR)transform.Rotate(0f, 180f, 0f);
-            LR = false;
-        }
-        else if (Keyboard.current.rightArrowKey.isPressed)
-        {
-            moveInput = 1f;
-            if (!LR) transform.Rotate(0f, 180f, 0f);
-            LR = true;        }
-
-        rb.linearVelocity = new Vector2(moveInput * Speed, rb.linearVelocity.y);
-    }*/
+   
 
     private void Fly()
     {
@@ -82,14 +69,14 @@ public class PlayerController : MonoBehaviour
     {
         if (Keyboard.current.sKey.wasPressedThisFrame)
         {
-            // 이미 다이브 중이면 시간 리셋(원하면 return으로 막아도 됨)
+            // 이미 다이브 중이면 시간 리셋
             if (diveCo != null) StopCoroutine(diveCo);
 
             // 물리 처리
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, DivePow);
 
-            // 애니메이션 처리 (추천 파라미터: Trigger + Bool)
-            anim.SetBool("Dive",true);        // 시작 신호
+            // 애니메이션 처리 
+            anim.SetBool("Dive",true);
             
 
             diveCo = StartCoroutine(DiveTimer());

@@ -28,7 +28,7 @@ public class ChunkSpawner : MonoBehaviour
     public float scrollSpeed;
     public float chunkYOffset = 0f;
     public float baseInterval = 4f;
-    private float _nextSpawnTime = 0f;
+
 
 
     [Header("Speed Ramp")]
@@ -82,12 +82,18 @@ public class ChunkSpawner : MonoBehaviour
 
     void Start()
     {
-        gameObject.SetActive(false);
+        Time.timeScale = 0f;
+        if (!chunkPrefab || !cam) return;
+
+        elapsed = 0f;
+        scrollSpeed = startScrollSpeed;
+    }
+    void OnEnable()
+    {
+        // 활성화될 때 초기 청크 생성
         if (!chunkPrefab || !cam) return;
 
         float left = CamLeftX() - spawnBufferWorld;
-
-        //  1) 시작 시 청크가 바로 보이는 어색함 제거: 초기 생성 X를 +로 민다
         float x = left + initialSpawnOffsetWorld;
 
         while (x < CamRightX() + spawnBufferWorld)
@@ -95,10 +101,7 @@ public class ChunkSpawner : MonoBehaviour
             alive.Add(CreateChunkAt(x));
             x += ChunkWorldWidth;
         }
-        elapsed = 0f;
-        scrollSpeed = startScrollSpeed;
     }
-
     void FixedUpdate()
     {
         if (!chunkPrefab || !cam) return;
@@ -150,19 +153,19 @@ public class ChunkSpawner : MonoBehaviour
         baseTm.transform.rotation = Quaternion.identity;
         baseTm.transform.localScale = Vector3.one;
 
-        //  2) WFC 기반 "그냥벽" 2개 생성
+        //  WFC 기반 "그냥벽" 2개 생성
         var ctx = new ChunkContext(chunkWidth, chunkHeight, minWallXDistance, gapSize, forbiddenItemYs);
         var wallPattern = wallGen.Generate(ctx);
 
         // base tilemap에 그냥벽을 그린다
         PaintWallColumns(baseTm, wallPattern.wallXs, wallPattern.gapCells, wallTile, ctx);
 
-        //  3) 색깔벽(독립 레이어) 생성: 그냥벽 2개 제외한 X 중 1개
+        // 색깔벽(독립 레이어) 생성: 그냥벽 2개 제외한 X 중 1개
         var colorLayer = (spawnColorWall)
             ? colorWallSpawner.TrySpawnColorWallLayer(baseTm, wallPattern.wallXs, ColorwallTile, ctx)
             : null;
 
-        //  4) 아이템: (그냥벽/색깔벽 다 그린 후) y=5, y=-5 제외 + 한 청크 6개 고정
+        //  아이템: (그냥벽/색깔벽 다 그린 후) y=5, y=-5 제외 + 한 청크 6개 고정
         itemSpawner.Spawn(baseTm, colorLayer, cherryPrefab, gemPrefab, itemsPerChunk, ctx);
 
         return baseTm;
@@ -226,7 +229,6 @@ public class ChunkSpawner : MonoBehaviour
         public readonly int gapSize;
         public readonly HashSet<int> forbiddenItemY;
 
-        // y좌표는 "중앙 기준"으로 쓰는 편이 (y=-5 같은 규칙) 맞아서:
         // height=10이면 yMin=-5, yMax=4
         public readonly int yMin;
         public readonly int yMax;
@@ -272,11 +274,9 @@ public class ChunkSpawner : MonoBehaviour
         WallPattern Generate(ChunkContext ctx);
     }
 
-    //  2) WFC 느낌(의존 규칙) 구현:
     // - 청크를 반으로 나눔
     // - 첫 벽은 한쪽 절반에서 랜덤 선택
     // - 두 번째 벽은 반대 절반에서 선택하되, 첫 벽과 최소 6 이상 떨어진 값(재시도)
-    // - 통로(gap)는 반드시 연속 4칸, 중간값(예: 0)에서 두 패턴(1,0,-1,-2) / (2,1,0,-1) 중 랜덤
     sealed class WfcWallPatternGenerator : IWallPatternGenerator
     {
         public WallPattern Generate(ChunkContext ctx)
@@ -287,35 +287,18 @@ public class ChunkSpawner : MonoBehaviour
             int x1 = PickXInHalf(ctx, firstHalf);
             int x2 = PickXInOtherHalfWithMinDist(ctx, 1 - firstHalf, x1);
 
-            // 2) gap(연속 4칸) y 만들기
-            //    gapYSeed는 전체 범위에서 하나 뽑고, 그 seed를 포함하는 4연속을 2가지 방식으로 결정
-            int seedY = UnityEngine.Random.Range(ctx.yMin, ctx.yMax + 1);
+            // 2) gap(연속 3칸) y 만들기
+            int seedY1 = UnityEngine.Random.Range(ctx.yMin+2, ctx.yMax + 1);
+            int seedY2 = UnityEngine.Random.Range(ctx.yMin+2, ctx.yMax + 1);
 
-            // Option A: seed, seed-1, seed-2, seed-3  (예: 5,4,3,2)
-            // Option B: seed+1, seed, seed-1, seed-2  (예: 2,1,0,-1 when seed=1 OR 2,1,0,-1 느낌)
-            var optA = new int[] { seedY, seedY - 1, seedY - 2, seedY - 3 };
-            var optB = new int[] { seedY + 1, seedY, seedY - 1, seedY - 2 };
+            var optA = new int[] { seedY1, seedY1 - 1, seedY1 - 2};
+            var optB = new int[] { seedY2, seedY2 - 1, seedY2 - 2};
 
-            bool aValid = IsAllWithin(ctx, optA);
-            bool bValid = IsAllWithin(ctx, optB);
-
-            int[] gapYs;
-            if (aValid && bValid) gapYs = (UnityEngine.Random.value < 0.5f) ? optA : optB;
-            else if (aValid) gapYs = optA;
-            else if (bValid) gapYs = optB;
-            else
-            {
-                // 둘 다 안맞으면(극단 경계) 강제로 clamp해서 연속 4칸 생성
-                int top = Mathf.Clamp(seedY, ctx.yMin + 3, ctx.yMax);
-                gapYs = new int[] { top, top - 1, top - 2, top - 3 };
-            }
-
-            // 3) 두 벽 각각에 같은 gapYs를 적용(요청대로)
             var gapCells = new HashSet<Vector3Int>();
-            for (int i = 0; i < gapYs.Length; i++)
+            for (int i = 0; i < 3; i++)
             {
-                gapCells.Add(new Vector3Int(x1, gapYs[i], 0));
-                gapCells.Add(new Vector3Int(x2, gapYs[i], 0));
+                gapCells.Add(new Vector3Int(x1, optA[i], 0));
+                gapCells.Add(new Vector3Int(x2, optB[i], 0));
             }
 
             return new WallPattern(new[] { x1, x2 }, gapCells);
@@ -349,7 +332,7 @@ public class ChunkSpawner : MonoBehaviour
             if (candidates.Count > 0)
                 return candidates[UnityEngine.Random.Range(0, candidates.Count)];
 
-            // 진짜 불가능하면 그냥 아무거나(설정이 이상한 경우)
+            // 진짜 불가능하면 그냥 아무거나
             return UnityEngine.Random.Range(start, endExclusive);
         }
 
@@ -410,7 +393,7 @@ public class ChunkSpawner : MonoBehaviour
             var state = go.AddComponent<ColorWallState>();
             state.Init(wallMode);
 
-            // 현재 필터 모드로 초기 Refresh(필터 없으면 기본은 막힘)
+            // 현재 필터 모드로 초기 Refresh
             var filter = UnityEngine.Object.FindObjectOfType<ColorFilter>();
             if (filter != null)
                 state.Refresh(filter.CurrentMode);
@@ -433,7 +416,7 @@ public class ChunkSpawner : MonoBehaviour
             {
                 var comp = go.GetComponent<CompositeCollider2D>();
                 if (!comp) comp = go.AddComponent<CompositeCollider2D>();
-                tmCol.usedByComposite = true; 
+                tmCol.usedByComposite = true; //중요 
                 comp.isTrigger = false; // 추가: 초기값
             }
         }
@@ -474,6 +457,9 @@ public class ChunkSpawner : MonoBehaviour
             if (!cherry && !gem) return;
             if (count <= 0) return;
 
+            UnityEngine.Random.InitState(System.DateTime.Now.Millisecond + baseTm.GetInstanceID());
+
+            var used = new HashSet<Vector3Int>();
             // “빈 칸” 랜덤으로 count개 뽑기 (충돌/제외 규칙)
             int placed = 0;
             int tries = 0;
@@ -488,7 +474,8 @@ public class ChunkSpawner : MonoBehaviour
                 if (ctx.forbiddenItemY.Contains(y)) continue;
 
                 var cell = new Vector3Int(x, y, 0);
-
+                //이미한곳 금지
+                if (used.Contains(cell)) continue;
                 // 벽(그냥벽) 위 금지
                 if (baseTm.HasTile(cell)) continue;
 
