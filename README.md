@@ -36,6 +36,8 @@ A 키: 필터 모드(색상) 변경(White → Red → Green → Blue 순환)
 
 GameOver 버튼으로 main 씬을 다시 로드합니다. 
 
+나가기는 Alt+F4를 하셔야합니다
+
 
 주요 스크립트 구성
 
